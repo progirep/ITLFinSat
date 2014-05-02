@@ -8,10 +8,18 @@ ITLSat is a bounded Satisfiabiliy Checker for Interval Temporal logic, written b
 2.1 Downloading and Compilation - Summary
 -------------------------
 On many Linux systems, ITLFinSat can be downloaded and built by the following sequence of commands:
-...
-...
-...
-...
+
+    git clone https://github.com/progirep/ITLFinSat
+    cd ITLFinSat
+    sudo apt-get install build-essential qt4-qmake bison flex libboost-dev
+    wget http://fmv.jku.at/picosat/picosat-957.tar.gz
+    tar -xzvf picosat-957.tar.gz
+    cd src
+    qmake Project.pro
+    make
+    ./itlsc < ../examples/simple5_2.itl
+
+The last command tests the satisfiability checker on a small example. If this sequence of commands does now work for your system, please refer to the next section for details on adapting the sequence.
 
 
 2B. Compilation - Long version
@@ -66,7 +74,7 @@ Note that for unsatisfiable formulas, "itlsc" diverges. To avoid this, the param
     Trying a word of length 10
     Result: Aborting due to reaching the maximum bound of 10
 
-In ITL formulas, you can use all temporal operators of ITL ([A], [B], [E], [O], [L], [D], [A'], [B'], [E'], [O'], [L'], [D'], <A>, <B>, <E>, <O>, <D>, <L>, <A'>, <B'>, <E'>, <O'>, <D'>, <L'>), the negation operator "!", the disjunction operator "|", the conjunction operator "&", braces "(...)" and atomic proposition names. In terms of operator precedences, the unary operators bind strongest, then conjunction, and finally discjunction (as usual). The tool will issue a syntax error in case of illegal input. Line breaks and spaces are ignored, but mark the end of a part of the formula, so the input formula "[A](very long variable name)" is not an allowed input.
+In ITL formulas, you can use all temporal operators of ITL ([A], [B], [E], [O], [L], [D], [A'], [B'], [E'], [O'], [L'], [D'], &lt;A>, &lt;B>, &lt;E>, &lt;O>, &lt;D>, &lt;L>, &lt;A'>, &lt;B'>, &lt;E'>, &lt;O'>, &lt;D'>, &lt;L'>), the negation operator "!", the disjunction operator "|", the conjunction operator "\&", braces "(...)" and atomic proposition names. In terms of operator precedences, the unary operators bind strongest, then conjunction, and finally discjunction (as usual). The tool will issue a syntax error in case of illegal input. Line breaks and spaces are ignored, but mark the end of a part of the formula, so the input formula "\[A\](very long variable name)" is not an allowed input.
 
 3. Examples and Tests
 ---------------------
