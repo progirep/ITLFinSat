@@ -3,6 +3,7 @@
 #include "boost/tuple/tuple_io.hpp"
 #include "abstractSatisfiabilityChecker.hpp"
 
+#define INCREMENTAL_SOLVING
 #define PICOSAT_ADD_0 { picosat_add(picosat,0); nofClausesSoFar++; }
 #define PICOSAT_ADD(x) { assert(x!=0); picosat_add(picosat,x); }
 
@@ -40,7 +41,7 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
             for (int j=i;j<newLength+1;j++) {
                 if ((i>wordLengthBoundSoFar) || (j>wordLengthBoundSoFar)) {
                     satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)] = ++nofPicosatVariablesUsedSoFar;
-                    // std::cerr << "Allocated SAT Variable: " << boost::make_tuple(it->second,i,j) << std::endl;
+                    //std::cerr << "Allocated SAT Variable: " << boost::make_tuple(it->second,i,j) << " " << nofPicosatVariablesUsedSoFar << std::endl;
                     nofVariablesSoFar++;
                 }
             }
@@ -55,7 +56,7 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
                 if ((i>wordLengthBoundSoFar) || (j>wordLengthBoundSoFar)) {
                     satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)] = ++nofPicosatVariablesUsedSoFar;
                     nofVariablesSoFar++;
-                    // std::cerr << "Allocated SAT Variable for formula: " << boost::make_tuple(it->second,i,j) << std::endl;
+                    //std::cerr << "Allocated SAT Variable for formula: " << boost::make_tuple(it->second,i,j) << " " << nofPicosatVariablesUsedSoFar << std::endl;
                 }
             }
         }
@@ -66,10 +67,19 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
         wordLengthBoundaryVariables.push_back(++nofPicosatVariablesUsedSoFar);
     }
 
+    // Re-init
+#ifndef INCREMENTAL_SOLVING
+    picosat_reset(picosat);
+    picosat = picosat_init();
+#endif
+
     // Add new formulas for the temporal operators
     for (int i=0;i<newLength;i++) {
         for (int j=i;j<newLength;j++) {
-            if ((i>=wordLengthBoundSoFar) || (j>=wordLengthBoundSoFar)) {
+#ifdef INCREMENTAL_SOLVING
+            if ((i>=wordLengthBoundSoFar) || (j>=wordLengthBoundSoFar))
+#endif
+            {
                 auto formulaNrs = formulaFactory.getFormulaNrs();
                 for (auto it = formulaNrs.begin();it!=formulaNrs.end();it++) {
                     switch (it->first.get<0>()) {
@@ -215,13 +225,20 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
     }
 
     // Make sure that the new formula is satisfied (only to be added in the first iteration).
-    if (wordLengthBoundSoFar==-1) {
+#ifdef INCREMENTAL_SOLVING
+    if (wordLengthBoundSoFar==-1)
+#endif
+    {
         PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(mainFormulaNumber,0,0)]);
         PICOSAT_ADD_0;
     }
 
     // Word length is at least newLength
+#ifdef INCREMENTAL_SOLVING
     for (int i=std::max(0,wordLengthBoundSoFar);i<newLength;i++) {
+#else
+    for (int i=0;i<newLength;i++) {
+#endif
         PICOSAT_ADD(wordLengthBoundaryVariables.at(i));
         PICOSAT_ADD_0;
     }
