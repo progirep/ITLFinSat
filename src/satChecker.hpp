@@ -28,7 +28,6 @@ private:
      * @brief Maps from Subformula-ID x Interval-Start x Interval-End to SAT variable
      */
     std::map<boost::tuple<int,int,int>,int> satInstanceSubformulaMapping;
-    std::vector<int> wordLengthBoundaryVariables;
 
     // General Problem Instance Variables
     int mainFormulaNumber;

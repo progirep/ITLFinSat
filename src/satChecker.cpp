@@ -10,7 +10,7 @@
 SatisfiabilityChecker::SatisfiabilityChecker(int formula) {
     picosat = picosat_init();
     nofPicosatVariablesUsedSoFar = 0;
-    wordLengthBoundSoFar = -1; // Allocate all varibales on the first call to "extendWordLengthBound"
+    wordLengthBoundSoFar = -1;
     mainFormulaNumber = formula;
     nofVariablesSoFar = 0;
     nofClausesSoFar = 0;
@@ -60,11 +60,6 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
                 }
             }
         }
-    }
-
-    // Allocate new word length boundary variables
-    while ((int)(wordLengthBoundaryVariables.size())<newLength+1) {
-        wordLengthBoundaryVariables.push_back(++nofPicosatVariablesUsedSoFar);
     }
 
     // Re-init
@@ -126,32 +121,36 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
                         break;
                     case TF_DIAMOND_B:
                         PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                        for (int k=j-1;k>=i;k--) {
-                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,k)]);
+                        if (j>i) {
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,j-1)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j-1)]);
                         }
                         PICOSAT_ADD_0;
                         break;
                     case TF_DIAMOND_E:
                         PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                        for (int k=i+1;k<=j;k++) {
-                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,j)]);
+                        if (j>i) {
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i+1,j)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(it->second,i+1,j)]);
                         }
                         PICOSAT_ADD_0;
                         break;
                     case TF_DIAMOND_A_BAR:
                         {
+                            auto it2 = formulaFactory.getFormulaNrs().find(boost::make_tuple(TF_DIAMOND_E_BAR,it->first.get<1>()));
+                            assert(it2!=formulaFactory.getFormulaNrs().end());
+                            int relevantBSubformula = it2->second;
                             PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                            for (int k=0;k<i;k++) {
-                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,i)]);
-                            }
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(relevantBSubformula,i,i)]);
                             PICOSAT_ADD_0;
                             break;
                         }
                     case TF_DIAMOND_E_BAR:
                         {
                             PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                            for (int k=i-1;k>=0;k--) {
-                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,j)]);
+                            if (i>0) {
+                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i-1,j)]);
+                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i-1,j)]);
                             }
                             PICOSAT_ADD_0;
                             break;
@@ -173,43 +172,55 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
                         }
                         break;
                     case TF_BOX_B:
-                        for (int k=j-1;k>=i;k--) {
+                        if (i<j) {
                             PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,k)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,j-1)]);
+                            PICOSAT_ADD_0;
+
+                            PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j-1)]);
                             PICOSAT_ADD_0;
                         }
                         break;
                     case TF_BOX_E:
-                        for (int k=i+1;k<=j;k++) {
+                        if (i<j) {
                             PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,j)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i+1,j)]);
+                            PICOSAT_ADD_0;
+
+                            PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(it->second,i+1,j)]);
                             PICOSAT_ADD_0;
                         }
                         break;
                     case TF_BOX_A_BAR:
                         {
-                            for (int k=0;k<i;k++) {
-                                PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,i)]);
-                                PICOSAT_ADD_0;
-                            }
+                            auto it2 = formulaFactory.getFormulaNrs().find(boost::make_tuple(TF_BOX_E_BAR,it->first.get<1>()));
+                            assert(it2!=formulaFactory.getFormulaNrs().end());
+                            int relevantESubformula = it2->second;
+                            PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
+                            PICOSAT_ADD(satInstanceSubformulaMapping[boost::make_tuple(relevantESubformula,i,i)]);
+                            PICOSAT_ADD_0;
                             break;
                         }
                     case TF_BOX_B_BAR:
-                        PICOSAT_ADD(-1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j)));
-                        PICOSAT_ADD(1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j+1)));
-                        PICOSAT_ADD(-1*wordLengthBoundaryVariables.at(j+1));
-                        PICOSAT_ADD_0;
-                        PICOSAT_ADD(-1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j)));
-                        PICOSAT_ADD(-1*wordLengthBoundaryVariables.at(j+1));
-                        PICOSAT_ADD(satInstanceSubformulaMapping.at(boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,j+1)));
-                        PICOSAT_ADD_0;
+                        if (j>i) {
+                            PICOSAT_ADD(-1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j-1)));
+                            PICOSAT_ADD(1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j)));
+                            PICOSAT_ADD_0;
+                            PICOSAT_ADD(-1*satInstanceSubformulaMapping.at(boost::make_tuple(it->second,i,j-1)));
+                            PICOSAT_ADD(satInstanceSubformulaMapping.at(boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i,j)));
+                            PICOSAT_ADD_0;
+                        }
                         break;
                     case TF_BOX_E_BAR:
                         {
-                            for (int k=i-1;k>=0;k--) {
+                            if (i>0) {
                                 PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
-                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),k,j)]);
+                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(formulaFactory.getSingleParameterOfTemporalSubformula(it->second),i-1,j)]);
+                                PICOSAT_ADD_0;
+                                PICOSAT_ADD(-1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)]);
+                                PICOSAT_ADD(1*satInstanceSubformulaMapping[boost::make_tuple(it->second,i-1,j)]);
                                 PICOSAT_ADD_0;
                             }
                             break;
@@ -233,28 +244,19 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
         PICOSAT_ADD_0;
     }
 
-    // Word length is at least newLength
-#ifdef INCREMENTAL_SOLVING
-    for (int i=std::max(0,wordLengthBoundSoFar);i<newLength;i++) {
-#else
-    for (int i=0;i<newLength;i++) {
-#endif
-        PICOSAT_ADD(wordLengthBoundaryVariables.at(i));
-        PICOSAT_ADD_0;
-    }
-
     // picosat_print(picosat,stderr);
 
     // Perform assumptions
     for (auto it = satInstanceSubformulaMapping.begin();it!=satInstanceSubformulaMapping.end();it++) {
         if (it->first.get<2>()==newLength) {
             // All polarities are negative such that we never need to check the word boundaries for Diamond-based temporal operators
-            picosat_assume(picosat,-1*it->second);
+            // with the exception of the BOX_B_BAR operator
+            if (formulaFactory.getFormulas()[it->first.get<0>()].get<0>()==TF_BOX_B_BAR) {
+            } else {
+                picosat_assume(picosat,-1*it->second);
+            }
         }
     }
-
-    // Word is not longer than it is
-    picosat_assume(picosat,-1*wordLengthBoundaryVariables[newLength]);
 
     // Assume main formula to be true
     // mainFormulaNumber
@@ -269,15 +271,13 @@ void SatisfiabilityChecker::extendWordLengthBound(int newLength) {
                 int satVariable = satInstanceSubformulaMapping[boost::make_tuple(it->second,i,j)];
                 auto it2 = storage.find(boost::make_tuple(it->second,i,j));
                 if (it2==storage.end()) {
-                    // Not reachable! Set to FALSE
-                    // std::cerr << "NR" << satVariable << " ";
-                    picosat_assume(picosat,-1*satVariable);
+                    // Not reachable!
                 } else {
                     if (it2->second==ThreeValueBool::FALSE) {
-                        // std::cerr << "NS" << satVariable << " ";
+                        //std::cerr << "NS" << satVariable << " ";
                         picosat_assume(picosat,-1*satVariable);
                     } else if (it2->second==ThreeValueBool::TRUE) {
-                        // std::cerr << "FT" << satVariable << " ";
+                        //std::cerr << "FT" << satVariable << " ";
                         picosat_assume(picosat,1*satVariable);
                     } else if (it2->second==ThreeValueBool::X) {
                         // OK
@@ -355,6 +355,10 @@ void SatisfiabilityChecker::addTemporalOperatorsNeededForTheEncoding() {
             subformulasToBeAdded.insert(boost::make_tuple(TF_DIAMOND_B_BAR,it->first.get<1>()));
         } else if (it->first.get<0>()==TF_BOX_A) {
             subformulasToBeAdded.insert(boost::make_tuple(TF_BOX_B_BAR,it->first.get<1>()));
+        } else if (it->first.get<0>()==TF_DIAMOND_A_BAR) {
+            subformulasToBeAdded.insert(boost::make_tuple(TF_DIAMOND_E_BAR,it->first.get<1>()));
+        } else if (it->first.get<0>()==TF_BOX_A_BAR) {
+            subformulasToBeAdded.insert(boost::make_tuple(TF_BOX_E_BAR,it->first.get<1>()));
         }
     }
     for (auto it = subformulasToBeAdded.begin();it!=subformulasToBeAdded.end();it++) {
@@ -404,8 +408,8 @@ void SatisfiabilityChecker::run(int maxBound) {
             //printAssignment();
             return;
         } else {
-            // printAPtoSATMapping();
-            // printSubformulaSATMapping();
+            //printAPtoSATMapping();
+            //printSubformulaSATMapping();
         }
     }
 }
